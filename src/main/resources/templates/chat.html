@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            var block;
+            var fetchMessages = {
+                interval : 1000,
+                refresh: function(){
+                    if(block)
+                        return;
+                    block=true;
+                    try {
+                        $.get("/gms", function (data, status, statusCode) {
+                            var ct = statusCode.getResponseHeader("content-type") || "";
+                            if (ct.indexOf('html') > -1) {
+                                $(location).attr('href','/');
+                            }
+                            if (ct.indexOf('json') > -1) {
+                                $("#msgList").empty();
+                                $.each(data, function (i, item) {
+                                    var li = $("<li><a></a></li>");
+                                    $("#msgList").append(li);
+                                    $("a", li).text("User " + item.userName + " -> " + item.message);
+                                })
+                            }
+                        })
+                    }
+                    finally {
+                        block=false;
+                    }
+                }
+            };
+
+            fetchMessages.refresh();
+
+            function disableSendBtn(disable) {
+                $("#sendit").attr("disabled", disable);
+            };
+            $("#msgform").submit(function () {
+                return false;
+            });
+            $("#sendit").click(function(){
+                $.post("/gms",
+                    {
+                        message:$("#msgInput").val()
+                    },
+                    function(data,status){
+                        if(status="success") {
+                            $("#msgInput").val("");
+                            disableSendBtn(true);
+                            fetchMessages.refresh();
+                        }
+                        else
+                        {alert("hata " + status)}
+                    });
+            });
+            $("#msgInput").keyup(function(){
+                disableSendBtn((!$.trim($("#msgInput").val()).length));
+            });
+
+            setInterval(fetchMessages.refresh, fetchMessages.interval);
+        });
+    </script>
+    <title>Innovera</title>
+</head>
+<body>
+<h1 th:inline="text">Hello [[${#httpServletRequest.remoteUser}]]!</h1>
+
+<form id="msgform">
+    <p> Enter your message</p>
+    <input type="text" id="msgInput"  value="" />
+    <button id="sendit" disabled="disabled">send it</button>
+</form>
+<form th:action="@{/logout}" method="post">
+    <input type="submit" value="Sign Out"/>
+</form>
+
+<p>Messages</p>
+<hr/>
+<ul type="1" id="msgList">
+</ul>
+
+
+</body>
+</html>
